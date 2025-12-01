@@ -31,7 +31,7 @@ h2 { margin: 0 0 12px; font-size: 1.25rem; color: var(--text); }
 .metric-label { color: var(--text-soft); font-size: 0.85rem; margin-bottom: 6px; }
 .metric-value { color: var(--text); font-size: 1.05rem; font-weight: 600; word-break: break-all; }
 
-.theme-dark { --bg: radial-gradient(1200px 600px at 10% -20%, #1f2238 0%, #121525 40%, #0c0f1a 100%);
-  --surface: #151724; --surface-border: #2a2d3d; --input-bg: #0f111b; --text: #e9ecf6; --text-soft: #b7bfd6; --text-muted: #8e96ac; --primary: #6a73ff; --accent: #2fc0ff; }
-.theme-light { --bg: radial-gradient(1200px 600px at 10% -20%, #e5e9ff 0%, #f7f8fc 55%, #ffffff 100%);
-  --surface: #ffffff; --surface-border: #e3e6f2; --input-bg: #f6f7fb; --text: #1e2433; --text-soft: #3a4156; --text-muted: #6b7280; --primary: #5b6cff; --accent: #00a7e6; }
+.theme-dark { --bg: radial-gradient(1200px 600px at 10% -20%, #0e1630 0%, #0b1226 50%, #0a1022 100%);
+  --surface: #0f172a; --surface-border: #1f2b46; --input-bg: #0b1327; --text: #e7ecf7; --text-soft: #bcc7dd; --text-muted: #8d96ad; --primary: #3561ff; --accent: #2fb7e4; }
+.theme-light { --bg: radial-gradient(1200px 600px at 10% -20%, #f3f6ff 0%, #f9fbff 55%, #ffffff 100%);
+  --surface: #ffffff; --surface-border: #dfe5f4; --input-bg: #f7f9fd; --text: #1c2437; --text-soft: #3b4a68; --text-muted: #6c7388; --primary: #2f5aff; --accent: #007ec2; }

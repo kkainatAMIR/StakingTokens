@@ -17,13 +17,15 @@ function App() {
   const [depositPlan, setDepositPlan] = useState(0)
   const [withdrawRewardAmount, setWithdrawRewardAmount] = useState('')
   const [theme, setTheme] = useState('dark')
-  // Removed from dashboard UI; keep local state minimal
   const [contractRewardsBalance, setContractRewardsBalance] = useState('')
   const [userStakeAmount, setUserStakeAmount] = useState('')
-  // Optional stake metadata removed from dashboard for simplicity
   const [pendingRewards, setPendingRewards] = useState('')
-  // Reward rate removed from dashboard
-  const PLAN_RATES = { 0: '10%', 1: '10%', 2: '10%' }
+  const [STAKING_TOKEN_BALANCE_UNUSED, setStakingTokenBalance] = useState('')
+  const [REWARDS_TOKEN_BALANCE_UNUSED, setRewardsTokenBalance] = useState('')
+  const [USER_PLAN_UNUSED, setUserPlan] = useState(null)
+  const [STAKE_START_TIME_UNUSED, setStakeStartTime] = useState(null)
+  const [LAST_CLAIM_UNUSED, setLastClaim] = useState(null)
+  const [REWARD_RATE_UNUSED, setRewardRate] = useState('')
 
   const hasEthereum = typeof window !== 'undefined' && window.ethereum
 
