@@ -2,10 +2,12 @@ import { useMemo, useState } from 'react'
 import './App.css'
 import { createPublicClient, createWalletClient, custom, http, parseUnits, formatUnits } from 'viem'
 import { polygon } from 'viem/chains'
+import Plans from './components/Plans'
 
 function App() {
   const [account, setAccount] = useState(null)
-  const [address, setAddress] = useState('0x7aDEE88c5fbc6D48cE5D7b2A0f3448AFa75ac057')
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [address] = useState('0x7aDEE88c5fbc6D48cE5D7b2A0f3448AFa75ac057')
   const [error, setError] = useState('')
   const [txHash, setTxHash] = useState('')
   const [success, setSuccess] = useState('')
@@ -16,7 +18,7 @@ function App() {
   const [depositAmount, setDepositAmount] = useState('')
   const [depositPlan, setDepositPlan] = useState(0)
   const [withdrawRewardAmount, setWithdrawRewardAmount] = useState('')
-  const [theme, setTheme] = useState('dark')
+  const [page, setPage] = useState('home')
   const [contractRewardsBalance, setContractRewardsBalance] = useState('')
   const [userStakeAmount, setUserStakeAmount] = useState('')
   const [pendingRewards, setPendingRewards] = useState('')
@@ -26,6 +28,15 @@ function App() {
   const [STAKE_START_TIME_UNUSED, setStakeStartTime] = useState(null)
   const [LAST_CLAIM_UNUSED, setLastClaim] = useState(null)
   const [REWARD_RATE_UNUSED, setRewardRate] = useState('')
+  const [ownerAddress, setOwnerAddress] = useState(null)
+
+  const potentialRewards = useMemo(() => {
+    const amt = Number(depositAmount || 0)
+    const planPct = depositPlan === 1 ? 0.10 : depositPlan === 2 ? 0.06 : depositPlan === 3 ? 0.02 : 0
+    if (!amt || !planPct) return ''
+    const val = amt * planPct
+    return String(val.toFixed(4))
+  }, [depositAmount, depositPlan])
 
   const hasEthereum = typeof window !== 'undefined' && window.ethereum
 
@@ -48,6 +59,7 @@ function App() {
       }
       const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
       setAccount(accounts?.[0] || null)
+      if ((accounts?.[0] || null)) setPage('dashboard')
       try {
         await window.ethereum.request({
           method: 'wallet_switchEthereumChain',
@@ -72,7 +84,7 @@ function App() {
       await refreshDashboard()
       if (window.ethereum && window.ethereum.on) {
         try {
-          window.ethereum.on('accountsChanged', async (accs) => { setAccount(accs?.[0] || null); await refreshDashboard() })
+          window.ethereum.on('accountsChanged', async (accs) => { setAccount(accs?.[0] || null); setPage(accs?.[0] ? 'dashboard' : 'home'); await refreshDashboard() })
           window.ethereum.on('chainChanged', async () => { await refreshDashboard() })
         } catch (err) { void err }
       }
@@ -179,6 +191,10 @@ function App() {
       try {
         const rr = await publicClient.readContract({ address, abi: [{ type: 'function', name: 'rewardRate', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] }], functionName: 'rewardRate' })
         setRewardRate(formatUnits(rr, 18))
+      } catch (err) { void err }
+      try {
+        const own = await publicClient.readContract({ address, abi: [{ type: 'function', name: 'owner', stateMutability: 'view', inputs: [], outputs: [{ type: 'address' }] }], functionName: 'owner' })
+        setOwnerAddress(own)
       } catch (err) { void err }
     } catch (err) {
       setError(String(err?.message || err))
@@ -383,77 +399,181 @@ function App() {
   }
 
   return (
-    <div className={`card dapp theme-${theme}`}>
-      <div className="header">
-        <div className="brand">Polygon Staking DApp</div>
-        <div className="network-pill">Polygon</div>
-        <div className="network-pill" title={address} style={{ maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {address}
-        </div>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
-          <button className="btn" onClick={connect}>Connect Wallet</button>
-          <button className="btn-outline btn" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>Switch Theme</button>
-        </div>
-      </div>
-      <div className="section">
-        <h2>Dashboard</h2>
-        <div className="metrics-grid">
-          <div className="metric"><div className="metric-label">Wallet</div><div className="metric-value">{account || ''}</div></div>
-          <div className="metric"><div className="metric-label">Staked Amount</div><div className="metric-value">{userStakeAmount || ''}</div></div>
-          <div className="metric"><div className="metric-label">Pending Rewards</div><div className="metric-value">{pendingRewards || ''}</div></div>
-          <div className="metric"><div className="metric-label">Contract Rewards Balance</div><div className="metric-value">{contractRewardsBalance || ''}</div></div>
-        </div>
-        <div className="actions" style={{ marginTop: 12 }}>
-          <button className="btn-outline btn" disabled={!account} onClick={refreshDashboard}>Refresh</button>
-        </div>
-      </div>
-      <div className="section">
-        <label>Contract Address</label>
-        <input value={address} onChange={(e) => setAddress(e.target.value)} />
-      </div>
-      <div className="section">
-        <h2>Deposit</h2>
-        <div className="grid2">
-          <div>
-            <label>Staking Token Address</label>
-            <input value={stakingTokenAddress} onChange={(e) => setStakingTokenAddress(e.target.value)} placeholder="0x..." />
+    <div className={`page theme-ocean`}>
+      <nav className="navbar">
+        <div className="navbar-container">
+          {/* Logo/Brand */}
+          <div className="navbar-brand">
           </div>
-          <div>
-            <label>Token Decimals</label>
-            <input type="number" value={stakingTokenDecimals} onChange={(e) => setStakingTokenDecimals(Number(e.target.value || 0))} />
+
+          {/* Hamburger Menu Button */}
+          <button className="hamburger" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} aria-label="Toggle menu">
+            <span className={`hamburger-line ${mobileMenuOpen ? 'open' : ''}`}></span>
+            <span className={`hamburger-line ${mobileMenuOpen ? 'open' : ''}`}></span>
+            <span className={`hamburger-line ${mobileMenuOpen ? 'open' : ''}`}></span>
+          </button>
+
+          {/* Navigation Links */}
+          <div className={`nav-menu ${mobileMenuOpen ? 'active' : ''}`}>
+            <button className={`nav-item ${page === 'staking' ? 'active' : ''}`} onClick={() => { setPage('staking'); setMobileMenuOpen(false); }}>Staking</button>
+            <button className={`nav-item ${page === 'wallet' ? 'active' : ''}`} onClick={() => { setPage('wallet'); setMobileMenuOpen(false); }}>Wallet</button>
+            <button className={`nav-item ${page === 'plans' ? 'active' : ''}`} onClick={() => { setPage('plans'); setMobileMenuOpen(false); }}>Plans</button>
+            <button className={`nav-item ${page === 'claim' ? 'active' : ''}`} onClick={() => { setPage('claim'); setMobileMenuOpen(false); }}>Claim</button>
+            {account && <button className={`nav-item admin-link ${page === 'admin' ? 'active' : ''}`} onClick={() => { setPage('admin'); setMobileMenuOpen(false); }}>Admin</button>}
+          </div>
+
+          {/* Connect Wallet Button */}
+          <div className="navbar-actions">
+            {!account && <button className="btn btn-secondary" onClick={connect}>Connect Wallet</button>}
+            {account && <span className="wallet-badge">{account.slice(0, 6)}...{account.slice(-4)}</span>}
           </div>
         </div>
-        <div className="grid2" style={{ marginTop: 12 }}>
-          <div>
-            <label>Amount</label>
-            <input value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} placeholder="e.g. 100" />
+      </nav>
+      {/* sub-nav removed to match screenshot */}
+
+      {page === 'home' && (
+        <div className="hero" style={{ position: 'relative' }}>
+          <div className="hero-ring" />
+          <div className="hero-title">STAKE / EARN</div>
+        </div>
+      )}
+      {(account || page === 'dashboard') && page === 'dashboard' && (
+      <div className="section">
+        <div className="card">
+          <div className="card-title">Dashboard</div>
+          <div className="dashboard-grid pill-decor">
+            <div className="metric gradient-metric"><div className="metric-label">Wallet</div><div className="metric-value">{account || ''}</div></div>
+            <div className="metric gradient-metric"><div className="metric-label">Staked Amount</div><div className="metric-value">{userStakeAmount || ''}</div></div>
+            <div className="metric gradient-metric"><div className="metric-label">Pending Rewards</div><div className="metric-value">{pendingRewards || ''}</div></div>
+            
           </div>
-          <div>
-            <label>Plan (uint8)</label>
-            <input type="number" value={depositPlan} onChange={(e) => setDepositPlan(Number(e.target.value || 0))} />
+          <div className="card-actions" style={{ marginTop: 12 }}>
+            <button className="btn-outline btn btn-raised" disabled={!account} onClick={refreshDashboard}>Refresh</button>
           </div>
         </div>
-        <div className="actions" style={{ marginTop: 12 }}>
-          <button className="btn-outline btn" disabled={!account} onClick={approveStakingToken}>Approve</button>
-          <button className="btn btn-secondary" disabled={!account} onClick={deposit}>Deposit</button>
       </div>
-      </div>
+      )}
+      {page === 'plans' && (
+        <Plans />
+      )}
+      {(page === 'staking') && (
       <div className="section">
-        <h2>Claim</h2>
-        <div className="actions" style={{ marginTop: 8 }}>
-          <button className="btn btn-secondary" disabled={!account} onClick={claim}>Claim Rewards</button>
-          <button className="btn-outline btn" disabled={!account} onClick={claimMaxFive}>Claim Max 5</button>
+        <div className="split">
+          <div>
+            <div className="staking-title">STAKE</div>
+            <div className="form-stack visual">
+              <div className="form-block visual">
+                <label>Staking Token Address</label>
+                <input value={stakingTokenAddress} onChange={(e) => setStakingTokenAddress(e.target.value)} placeholder="0x760DC9a5197C9400D82dA44Bb57e0176cf102F40" />
+              </div>
+              <div className="form-block visual">
+                <label>Token Decimals</label>
+                <input type="number" value={stakingTokenDecimals} onChange={(e) => setStakingTokenDecimals(Number(e.target.value || 0))} placeholder="18" />
+              </div>
+              <div className="form-block visual">
+                <label>Amount</label>
+                <input value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} placeholder="e.g. 100" />
+              </div>
+              <div className="form-block visual">
+                <label>Plan </label>
+                <input type="number" value={depositPlan} onChange={(e) => setDepositPlan(Number(e.target.value || 0))} placeholder="0" />
+              </div>
+              {/* <div className="form-block visual">
+                <label>Potential Rewards</label>
+                <div style={{ color: '#cfe1ff', paddingTop: 8, fontSize: '14px' }}>{potentialRewards || '-'} RWD</div>
+              </div> */}
+              <div className="actions" style={{ marginTop: 8 }}>
+                <button className="btn-outline btn btn-raised" disabled={!account} onClick={approveStakingToken}>Approve</button>
+                <button className="btn btn-secondary btn-raised" disabled={!account} onClick={deposit}>Deposit</button>
+              </div>
+            </div>
+          </div>
+          <div className="neon-square" />
         </div>
       </div>
+      )}
+      {(account || page === 'deposit') && page === 'deposit' && (
+        <div className="section">
+          <div className="card">
+          <div className="card-title">Deposit</div>
+          <div className="grid2">
+            <div>
+              <label>Staking Token Address</label>
+              <input value={stakingTokenAddress} onChange={(e) => setStakingTokenAddress(e.target.value)} placeholder="0x..." />
+            </div>
+            <div>
+              <label>Token Decimals</label>
+              <input type="number" value={stakingTokenDecimals} onChange={(e) => setStakingTokenDecimals(Number(e.target.value || 0))} />
+            </div>
+          </div>
+          <div className="grid2" style={{ marginTop: 12 }}>
+            <div>
+              <label>Amount</label>
+              <input value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} placeholder="e.g. 100" />
+            </div>
+            <div>
+              <label>Plan (uint8)</label>
+              <input type="number" value={depositPlan} onChange={(e) => setDepositPlan(Number(e.target.value || 0))} />
+            </div>
+          </div>
+          <div style={{ marginTop: 10, color: '#cfe1ff' }}>Potential Rewards: {potentialRewards || '—'} rRWD</div>
+          <div className="card-actions" style={{ marginTop: 12 }}>
+            <button className="btn-outline btn btn-raised" disabled={!account} onClick={approveStakingToken}>Approve</button>
+            <button className="btn btn-secondary btn-raised" disabled={!account} onClick={deposit}>Deposit</button>
+          </div>
+          </div>
+        </div>
+      )}
+      {(account || page === 'claim') && page === 'claim' && (
       <div className="section">
-        <h2>Admin: Withdraw Reward Tokens</h2>
+        <div className="split">
+          <div className="form-stack">
+            <div className="form-block">          <p className="extra">Earn Rewards</p>
+
+              <input readOnly value={pendingRewards || ''} placeholder="Pending Rewards" />  
+            </div>
+            <div className="form-block">  <p className='extra'>Token amount</p>
+              <input readOnly value={contractRewardsBalance || ''} placeholder="Contract Rewards Balance" />
+               
+            </div>
+            <div className="actions" style={{ marginTop: 4 }}>
+              <button className="btn btn-secondary btn-raised" disabled={!account} onClick={claim}>Claim Rewards</button>
+              <button className="btn-outline btn btn-raised" disabled={!account} onClick={claimMaxFive}>Claim Max 5</button>
+            </div>
+          </div>
+          <div className="neon-square" />
+        </div>
+      </div>
+      )}
+      {(account || page === 'wallet') && page === 'wallet' && (
+      <div className="section">
+        <div className="card">
+          <div className="card-title">Wallet</div>
+          <div className="dashboard-grid">
+            <div className="metric gradient-metric"><div className="metric-label">Address</div><div className="metric-value">{account || ''}</div></div>
+            <div className="metric gradient-metric"><div className="metric-label">Staking Token</div><div className="metric-value">{STAKING_TOKEN_BALANCE_UNUSED || ''}</div></div>
+            <div className="metric gradient-metric"><div className="metric-label">Rewards Token</div><div className="metric-value">{REWARDS_TOKEN_BALANCE_UNUSED || ''}</div></div>
+          </div>
+          <div className="card-actions" style={{ marginTop: 12 }}>
+            <button className="btn-outline btn btn-raised" disabled={!account} onClick={refreshDashboard}>Refresh</button>
+          </div>
+        </div>
+      </div>
+      )}
+      {page === 'admin' && (
+      <div className="section">
+        <div className="card">
+        <div className="card-title">Admin: Withdraw Reward Tokens</div>
+        {(!account || !ownerAddress || ownerAddress?.toLowerCase() !== account?.toLowerCase()) && (
+          <div style={{ color: '#ff9d9d', marginBottom: 10 }}>Access restricted. Connect as contract owner to use admin tools.</div>
+        )}
         <div className="grid2">
           <div>
             <label>Amount</label>
             <input value={withdrawRewardAmount} onChange={(e) => setWithdrawRewardAmount(e.target.value)} placeholder="e.g. 100" />
           </div>
-          <div>
-            <button className="btn" disabled={!account} onClick={withdrawRewardTokens}>Withdraw</button>
+          <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+            <button className="btn btn-raised" disabled={!account || !ownerAddress || ownerAddress?.toLowerCase() !== account?.toLowerCase()} onClick={withdrawRewardTokens}>Withdraw</button>
           </div>
         </div>
         <div className="grid2" style={{ marginTop: 12 }}>
@@ -461,8 +581,8 @@ function App() {
             <label>Deposit Rewards To Contract</label>
             <input value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} placeholder="e.g. 100" />
           </div>
-          <div>
-            <button className="btn-outline btn" disabled={!account} onClick={async () => {
+          <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+            <button className="btn-outline btn btn-raised" disabled={!account} onClick={async () => {
               try {
                 setError('')
                 setSuccess('')
@@ -481,7 +601,16 @@ function App() {
             }}>Deposit Rewards</button>
           </div>
         </div>
+        <div style={{ marginTop: 18 }}>
+          <h2 style={{ color: '#e7ecf7' }}>Data</h2>
+          <div className="grid2">
+            <div className="metric gradient-metric"><div className="metric-label">Total Stakes</div><div className="metric-value">—</div></div>
+            <div className="metric gradient-metric"><div className="metric-label">Total Rewards</div><div className="metric-value">—</div></div>
+          </div>
+        </div>
+        </div>
       </div>
+      )}
       {error && (
         <div className="error" style={{ marginTop: 12 }}>{error}</div>
       )}
@@ -496,6 +625,8 @@ function App() {
       )}
       <div style={{ marginTop: 24 }}>
         <a target="_blank" href={`https://polygonscan.com/address/${address}#writeContract`}>Polygonscan Contract</a>
+      
+
       </div>
     </div>
   )
